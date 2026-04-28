@@ -1,0 +1,52 @@
+# ==========================================
+# IntelliJ IDEA / WebStorm / PhpStorm
+# ==========================================
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+gen/
+
+# ==========================================
+# Solidity / Smart Contracts (Hardhat/Foundry/Truffle)
+# ==========================================
+artifacts/
+cache/
+typechain/
+typechain-types/
+coverage/
+coverage.json
+broadcast/
+.solhint.json
+
+# ==========================================
+# Node / Frontend (Pacotes e Build)
+# ==========================================
+node_modules/
+npm-debug.log
+yarn-error.log
+dist/
+build/
+.parcel-cache/
+
+# ==========================================
+# Variáveis de Ambiente / Segredos
+# ==========================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.secret
+
+# ==========================================
+# Arquivos de Sistema Operacional
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

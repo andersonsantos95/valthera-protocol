@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Valthera Protocol MVP</title>
+    <style>
+        body { font-family: monospace; background: #121212; color: #00ffcc; padding: 20px; }
+        .tab { display: none; margin-top: 20px; }
+        .active-tab { display: block; }
+        .card { border: 1px solid #333; padding: 15px; margin-bottom: 15px; border-radius: 5px; background: #1a1a1a; }
+        button { background: #00ffcc; color: #121212; border: none; padding: 10px 15px; cursor: pointer; font-weight: bold; margin-top: 5px; border-radius: 3px; }
+        button:hover { background: #00ccaa; }
+        input, select { background: #222; color: #fff; border: 1px solid #444; padding: 8px; margin: 5px 0 15px 0; width: 100%; max-width: 400px; display: block; font-family: monospace; border-radius: 3px; }
+        .nav-btn { background: #333; color: white; margin-right: 5px; margin-bottom: 5px; padding: 8px 12px;}
+        .nav-btn.active { background: #00ffcc; color: #121212; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        table { width: 100%; max-width: 1000px; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #444; padding: 8px; text-align: left; }
+        th { background-color: #222; }
+        .balance-info { font-size: 0.8em; color: #aaa; margin-top: -10px; margin-bottom: 10px; display: block; }
+        .status-badge { display: inline-block; padding: 3px 8px; border-radius: 3px; font-size: 0.8em; font-weight: bold; margin-bottom: 5px; }
+
+        #toast {
+            display: none; position: fixed; top: 20px; right: 20px;
+            padding: 15px 20px; border-radius: 5px; font-weight: bold;
+            z-index: 9999; box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+<div id="toast"></div>
+
+<div class="header">
+    <h1>Valthera Protocol</h1>
+    <div>
+        <button id="btnConnect">Conectar Carteira</button>
+        <span id="walletAddress" style="margin-left: 10px; font-size: 0.9em; color: #fff;"></span>
+    </div>
+</div>
+
+<div style="margin-top: 20px;" id="nav-container">
+    <button class="nav-btn active" onclick="showTab('config', this)">Configurações</button>
+    <button class="nav-btn" onclick="showTab('dashboard', this)">Dashboard</button>
+    <button class="nav-btn" onclick="showTab('deposit', this)">Depósito/Saque</button>
+    <button class="nav-btn" onclick="showTab('nft_mint', this)">Cadastrar Bem Físico</button>
+    <button class="nav-btn" onclick="showTab('liquidity', this)">Staking / Liquidez</button>
+    <button class="nav-btn" onclick="showTab('market', this)">Mercado NFT</button>
+    <button class="nav-btn" onclick="showTab('dao', this)">Governança DAO</button>
+</div>
+
+<div id="config" class="tab active-tab card">
+    <h3>Configuração de Contratos</h3>
+    <label>DeFi Core Contract:</label><input type="text" id="defiAddr" onchange="saveConfig()">
+    <label>Market Contract:</label><input type="text" id="marketAddr" onchange="saveConfig()">
+    <label>DAO Contract:</label><input type="text" id="daoAddr" onchange="saveConfig()">
+    <button onclick="loadBlockchainData()" style="background-color: #ff00cc; color: white;">Sincronizar Protocolo</button>
+</div>
+
+<div id="dashboard" class="tab">
+    <div class="card" style="border-color: #00ffcc; background-color: #0a1a1a;">
+        <h4>Parâmetros Globais do Protocolo (Lidos do Contrato)</h4>
+        <div style="display: flex; flex-wrap: wrap; gap: 20px; color: #aaa;">
+            <div><strong>Taxa de Recompensa (X):</strong> <span id="dashRate" style="color:#fff;">...</span></div>
+            <div><strong>Intervalo Base (Y):</strong> <span id="dashInterval" style="color:#fff;">...</span></div>
+            <div><strong>Saque Mínimo de Lucro:</strong> <span id="dashMinClaim" style="color:#fff;">...</span></div>
+            <div><strong>Duração de Votação (DAO):</strong> <span id="dashDaoTime" style="color:#fff;">...</span></div>
+        </div>
+    </div>
+    <div class="card">
+        <h3>Visão Geral do Protocolo</h3>
+        <table id="dashTable">
+            <tr><th>Ativo</th><th>Preço Oráculo</th><th>Total Emitido</th><th>Valor Total (USD)</th><th>Em Staking</th><th>TVL (USD)</th></tr>
+        </table>
+    </div>
+</div>
+
+<div id="deposit" class="tab">
+    <div class="card" style="border-color: #ffcc00; background-color: #1a1a0a;">
+        <h3>Ativos na Minha Carteira (Liquidez Imediata)</h3>
+        <table id="walletAssetsTable">
+            <tr><th>Ativo</th><th>Tipo</th><th>Saldo</th><th>Valor Est. (USD)</th></tr>
+        </table>
+    </div>
+
+    <div class="card">
+        <h3>Emitir vAssets (Depositar)</h3>
+        <label>Selecione o Ativo:</label><select id="depToken"></select>
+        <label>Quantidade a Emitir:</label><input type="number" id="depAmount">
+        <button onclick="depositAsset()">Confirmar Depósito</button>
+    </div>
+    <div class="card">
+        <h3>Resgatar (Sacar / Burn)</h3>
+        <label>Selecione o Ativo para Sacar:</label>
+        <select id="withdrawToken" onchange="updateBalance('withdrawToken', 'withdrawBalance', 'withdrawAmount')"></select>
+        <span id="withdrawBalance" class="balance-info">Saldo: 0</span>
+        <label>Quantidade a Queimar:</label><input type="number" id="withdrawAmount">
+        <button onclick="withdrawAsset()">Confirmar Saque</button>
+    </div>
+</div>
+
+<div id="nft_mint" class="tab">
+    <div class="card">
+        <h3>Registrar Bem Físico (NFT)</h3>
+        <label>Descrição do Bem (Ex: Imóvel em Fortaleza):</label>
+        <input type="text" id="nftDesc">
+        <button onclick="mintNFT()">Registrar na Blockchain</button>
+    </div>
+    <div class="card">
+        <h3>Meus Bens Registrados (vNFT)</h3>
+        <table id="myNftTableRaw">
+            <tr><th>ID</th><th>Descrição</th></tr>
+        </table>
+    </div>
+</div>
+
+<div id="liquidity" class="tab">
+    <div class="card" style="border-color: #ff00cc; background-color: #1a101a;">
+        <h3>Consolidado de Recompensas de Staking</h3>
+        <p>Lucro Total Pendente (Todos os ativos): <strong id="totalRewards" style="color:#ff00cc; font-size: 1.2em;">0.00 VALT</strong></p>
+        <p>TVL Pessoal em Dólar: <strong id="totalStakedUSD" style="color:#00ffcc;">$ 0.00</strong></p>
+        <button onclick="claimGlobalRewards()" style="background-color: #ff00cc; color: white;">Resgatar Todo o Lucro</button>
+    </div>
+
+    <div class="card">
+        <h3>Detalhes da Minha Carteira em Staking</h3>
+        <table id="myStakingDetailsTable">
+            <tr><th>Ativo</th><th>Quantidade Travada</th><th>Lucro Pendente (VALT)</th></tr>
+        </table>
+    </div>
+
+    <div class="card">
+        <h3>Travar Ativos (Adicionar Staking)</h3>
+        <select id="liqProvideToken" onchange="updateBalance('liqProvideToken', 'liqProvideBalance', 'liqProvideAmount')"></select>
+        <span id="liqProvideBalance" class="balance-info">Saldo: 0</span>
+        <label>Quantidade:</label><input type="number" id="liqProvideAmount">
+        <button onclick="provideLiquidity()">Travar e Receber LP</button>
+    </div>
+    <div class="card">
+        <h3>Destravar Ativos (Remover Staking)</h3>
+        <select id="liqRemoveToken" onchange="updateLPBalance('liqRemoveToken', 'liqRemoveBalance', 'liqRemoveAmount')"></select>
+        <span id="liqRemoveBalance" class="balance-info">Saldo LP Disponível: 0</span>
+        <label>Quantidade de LP a Queimar:</label>
+        <input type="number" id="liqRemoveAmount" oninput="updateRemovePrediction()">
+        <p id="liqRemovePrediction" style="color: #00ffcc; font-weight: bold; margin-top: -5px; min-height: 20px; font-size: 0.9em;"></p>
+        <button onclick="removeLiquidity()">Queimar LP e Recuperar Ativos</button>
+    </div>
+</div>
+
+<div id="market" class="tab">
+    <div class="card">
+        <h4>Anunciar Meu Bem</h4>
+        <label>Meus NFTs:</label><select id="myNfts"></select>
+        <label>Preço de Venda:</label><input type="number" id="sellPrice">
+        <label>Moeda de Recebimento:</label><select id="sellToken"></select>
+        <button onclick="listNFT()">Listar no Mercado</button>
+    </div>
+    <div class="card">
+        <h4>Anúncios Ativos</h4>
+        <table id="marketTable">
+            <tr><th>ID</th><th>Descrição</th><th>Vendedor</th><th>Preço</th><th>Ação</th></tr>
+        </table>
+    </div>
+</div>
+
+<div id="dao" class="tab card">
+    <h3>Governança do Protocolo</h3>
+    <div class="card">
+        <h4>Nova Proposta</h4>
+        <label>Variável a Alterar:</label>
+        <select id="daoTarget" onchange="showCurrentValue()">
+            <option value="99" disabled selected>Selecione uma opção...</option>
+            <option value="0">Taxa de Recompensa por Dólar (X) - Em VALT</option>
+            <option value="1">Intervalo de Tempo (Y) - Em Segundos</option>
+            <option value="2">Saque Mínimo para Claim - Em VALT</option>
+            <option value="3">Tempo de Votação da DAO - Em Segundos</option>
+        </select>
+        <p id="currentValueLabel" style="color:#aaa; font-size:0.9em; margin-top: -10px;">Valor atual: Aguardando seleção...</p>
+
+        <label>Motivo / Descrição:</label><input type="text" id="daoDesc">
+        <label>Novo Valor Numérico:</label><input type="number" id="daoNewValue">
+        <button onclick="createProposal()">Criar Proposta</button>
+    </div>
+    <h4>Propostas na Blockchain</h4>
+    <div id="daoList">Aguardando sincronização...</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+<script>
+    let provider, signer, userAddress;
+
+    function showTab(tabId, btnElement) {
+        const targetTab = document.getElementById(tabId);
+        if(!targetTab) return;
+
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active-tab'));
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        targetTab.classList.add('active-tab');
+        if(btnElement) btnElement.classList.add('active');
+    }
+
+    function showMsg(msg, isError = false) {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.style.backgroundColor = isError ? "#ff3333" : "#00ffcc";
+        t.style.color = isError ? "#fff" : "#121212";
+        t.style.display = "block";
+        setTimeout(() => { t.style.display = "none"; }, 5000);
+    }
+
+    function saveConfig() {
+        localStorage.setItem('valthera_defi', document.getElementById('defiAddr').value.trim());
+        localStorage.setItem('valthera_market', document.getElementById('marketAddr').value.trim());
+        localStorage.setItem('valthera_dao', document.getElementById('daoAddr').value.trim());
+    }
+
+    window.onload = () => {
+        document.getElementById('defiAddr').value = localStorage.getItem('valthera_defi') || '';
+        document.getElementById('marketAddr').value = localStorage.getItem('valthera_market') || '';
+        document.getElementById('daoAddr').value = localStorage.getItem('valthera_dao') || '';
+    };
+
+    const defiAbi = [
+        "function registerRealAssetNFT(string) external",
+        "function depositRealAsset(address,uint256) external", "function withdrawRealAsset(address,uint256) external",
+        "function provideLiquidity(address,uint256) external", "function removeLiquidity(address,uint256) external",
+        "function claimGlobalRewards() external", "function getPendingReward(address,address) external view returns (uint256)",
+        "function getSupportedAssets() external view returns (address[] memory)", "function nftContract() external view returns (address)",
+        "function assetToLpToken(address) external view returns (address)", "function getAssetPriceUSD(address) external view returns (uint256)",
+        "function userStakedBalance(address,address) external view returns (uint256)",
+        "function rewardRateX() external view returns (uint256)", "function rewardIntervalY() external view returns (uint256)", "function minClaimAmount() external view returns (uint256)"
+    ];
+    const erc20Abi = ["function approve(address,uint256) external returns (bool)", "function symbol() external view returns (string)", "function totalSupply() external view returns (uint256)", "function balanceOf(address) external view returns (uint256)"];
+    const nftAbi = ["function approve(address,uint256) external", "function totalSupply() external view returns (uint256)", "function ownerOf(uint256) external view returns (address)", "function descriptions(uint256) external view returns (string)"];
+    const marketAbi = ["function listNFT(uint256,uint256,address) external", "function buyNFT(uint256) external", "function listings(uint256) external view returns (address,uint256,address,bool)"];
+    const daoAbi = [
+        "function createProposal(string,uint8,uint256) external", "function vote(uint256,bool) external", "function executeProposal(uint256) external",
+        "function proposalCount() external view returns (uint256)", "function votingDuration() external view returns (uint256)",
+        "function getProposalDetails(uint256) external view returns (string,uint8,uint256,uint256,uint256,uint256,bool)"
+    ];
+
+    document.getElementById('btnConnect').onclick = async () => {
+        if (window.ethereum) {
+            try {
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                await provider.send("eth_requestAccounts", []);
+                signer = provider.getSigner();
+                userAddress = await signer.getAddress();
+                document.getElementById('walletAddress').innerText = "Conectado: " + userAddress.slice(0,6) + "...";
+                if(document.getElementById('defiAddr').value) loadBlockchainData();
+            } catch(e) { showMsg("Erro ao conectar.", true); }
+        } else { showMsg("Instale a MetaMask!", true); }
+    };
+
+    async function showCurrentValue() {
+        try {
+            if(!provider) return;
+            const target = document.getElementById('daoTarget').value;
+            if(target === "99") return;
+            const defi = new ethers.Contract(document.getElementById('defiAddr').value, defiAbi, provider);
+            const dao = new ethers.Contract(document.getElementById('daoAddr').value, daoAbi, provider);
+            let val = "";
+            if(target === "0") val = ethers.utils.formatEther(await defi.rewardRateX()) + " VALT por Dólar";
+            if(target === "1") val = (await defi.rewardIntervalY()).toString() + " Segundos";
+            if(target === "2") val = ethers.utils.formatEther(await defi.minClaimAmount()) + " VALT";
+            if(target === "3") val = (await dao.votingDuration()).toString() + " Segundos";
+            document.getElementById('currentValueLabel').innerText = "Valor atual: " + val;
+        } catch (error) { document.getElementById('currentValueLabel').innerText = "Erro ao ler contrato."; }
+    }
+
+    async function updateBalance(selectId, spanId, inputId) {
+        if(!userAddress) return;
+        const tokenAddr = document.getElementById(selectId).value;
+        if(!tokenAddr) return;
+        const bal = await new ethers.Contract(tokenAddr, erc20Abi, provider).balanceOf(userAddress);
+        const sym = await new ethers.Contract(tokenAddr, erc20Abi, provider).symbol();
+        const formattedBal = ethers.utils.formatEther(bal);
+        document.getElementById(spanId).innerText = `Saldo disponível: ${formattedBal} ${sym}`;
+        document.getElementById(inputId).max = formattedBal;
+    }
+
+    async function updateLPBalance(selectId, spanId, inputId) {
+        if(!userAddress) return;
+        const mainToken = document.getElementById(selectId).value;
+        if(!mainToken) return;
+        const defiContract = new ethers.Contract(document.getElementById('defiAddr').value, defiAbi, provider);
+        const lpAddr = await defiContract.assetToLpToken(mainToken);
+        const bal = await new ethers.Contract(lpAddr, erc20Abi, provider).balanceOf(userAddress);
+        const sym = await new ethers.Contract(lpAddr, erc20Abi, provider).symbol();
+        const formattedBal = ethers.utils.formatEther(bal);
+        document.getElementById(spanId).innerText = `Saldo LP disponível: ${formattedBal} ${sym}`;
+        document.getElementById(inputId).max = formattedBal;
+        updateRemovePrediction();
+    }
+
+    function validateAmount(inputId) {
+        const input = document.getElementById(inputId);
+        const val = parseFloat(input.value);
+        const max = parseFloat(input.max || 0);
+        if(isNaN(val) || val <= 0) { showMsg("Insira um valor válido.", true); return false; }
+        if(val > max) { showMsg(`Saldo insuficiente!`, true); return false; }
+        return true;
+    }
+
+    async function updateRemovePrediction() {
+        if(!userAddress) return;
+        const tk = document.getElementById('liqRemoveToken').value;
+        const amtInput = document.getElementById('liqRemoveAmount').value;
+        const predictionSpan = document.getElementById('liqRemovePrediction');
+        if(!tk || !amtInput || amtInput <= 0) { predictionSpan.innerText = ""; return; }
+        try {
+            const defi = new ethers.Contract(document.getElementById('defiAddr').value, defiAbi, provider);
+            const pending = await defi.getPendingReward(userAddress, tk);
+            const sym = await new ethers.Contract(tk, erc20Abi, provider).symbol();
+            predictionSpan.innerText = `Ao confirmar, você receberá: ${amtInput} ${sym} (Principal) + ${ethers.utils.formatEther(pending)} VALT (Lucro do Auto-Claim)`;
+        } catch(e) { predictionSpan.innerText = ""; }
+    }
+
+    async function loadBlockchainData() {
+        try {
+            if(!userAddress) return showMsg("Conecte a carteira primeiro!", true);
+            const defiAddr = document.getElementById('defiAddr').value.trim();
+            if(!defiAddr || defiAddr.length !== 42) return showMsg("Endereço DeFi inválido.", true);
+            saveConfig(); showMsg("Sincronizando...");
+
+            const defiContract = new ethers.Contract(defiAddr, defiAbi, provider);
+            const assets = await defiContract.getSupportedAssets();
+
+            // Dashboard Params
+            try {
+                document.getElementById('dashRate').innerText = ethers.utils.formatEther(await defiContract.rewardRateX()) + " VALT por USD";
+                document.getElementById('dashInterval').innerText = (await defiContract.rewardIntervalY()).toString() + " Segundos";
+                document.getElementById('dashMinClaim').innerText = ethers.utils.formatEther(await defiContract.minClaimAmount()) + " VALT";
+            } catch(e) {}
+
+            let optionsHtml = '';
+            let dashHtml = '<tr><th>Ativo</th><th>Preço Oráculo</th><th>Total Emitido</th><th>Valor Total (USD)</th><th>Em Staking</th><th>TVL (USD)</th></tr>';
+            let stakingDetailsHtml = '<tr><th>Ativo</th><th>Quantidade Travada</th><th>Lucro Pendente (VALT)</th></tr>';
+            let walletAssetsHtml = '<tr><th>Ativo</th><th>Tipo</th><th>Saldo</th><th>Valor Est. (USD)</th></tr>';
+
+            let totalRewards = ethers.BigNumber.from(0);
+            let totalStakedUSD = 0;
+            let hasStaking = false;
+
+            for(let i=0; i<assets.length; i++) {
+                const tokenContract = new ethers.Contract(assets[i], erc20Abi, provider);
+                const symbol = await tokenContract.symbol();
+                const supply = ethers.utils.formatEther(await tokenContract.totalSupply());
+                const poolBalance = ethers.utils.formatEther(await tokenContract.balanceOf(defiAddr));
+                const walletBal = await tokenContract.balanceOf(userAddress);
+                const stakedPessoal = await defiContract.userStakedBalance(assets[i], userAddress);
+                const pending = await defiContract.getPendingReward(userAddress, assets[i]);
+                const lpAddr = await defiContract.assetToLpToken(assets[i]);
+                const lpContract = new ethers.Contract(lpAddr, erc20Abi, provider);
+                const lpSymbol = await lpContract.symbol();
+                const walletLPBal = await lpContract.balanceOf(userAddress);
+
+                let priceUsd = 0;
+                try { priceUsd = parseFloat(ethers.utils.formatEther(await defiContract.getAssetPriceUSD(assets[i]))); } catch (err) {}
+
+                totalRewards = totalRewards.add(pending);
+                totalStakedUSD += (parseFloat(ethers.utils.formatEther(stakedPessoal)) * priceUsd);
+
+                optionsHtml += `<option value="${assets[i]}">${symbol}</option>`;
+                dashHtml += `<tr><td>${symbol}</td><td>$ ${priceUsd.toFixed(2)}</td><td>${supply}</td><td style="color: #ff00cc;">$ ${(parseFloat(supply)*priceUsd).toFixed(2)}</td><td>${poolBalance}</td><td style="color: #00ffcc;">$ ${(parseFloat(poolBalance)*priceUsd).toFixed(2)}</td></tr>`;
+
+                // Carteira
+                walletAssetsHtml += `<tr><td>${symbol}</td><td>Lastreado</td><td>${ethers.utils.formatEther(walletBal)}</td><td style="color: #00ffcc;">$ ${(parseFloat(ethers.utils.formatEther(walletBal))*priceUsd).toFixed(2)}</td></tr>`;
+                walletAssetsHtml += `<tr><td>${lpSymbol}</td><td>Recibo (LP)</td><td>${ethers.utils.formatEther(walletLPBal)}</td><td style="color: #ff00cc;">$ ${(parseFloat(ethers.utils.formatEther(walletLPBal))*priceUsd).toFixed(2)}</td></tr>`;
+
+                if(stakedPessoal > 0) {
+                    hasStaking = true;
+                    stakingDetailsHtml += `<tr><td>${symbol}</td><td>${ethers.utils.formatEther(stakedPessoal)}</td><td style="color:#ff00cc;">${ethers.utils.formatEther(pending)}</td></tr>`;
+                }
+            }
+
+            document.getElementById('walletAssetsTable').innerHTML = walletAssetsHtml;
+            document.getElementById('totalRewards').innerText = ethers.utils.formatEther(totalRewards) + " VALT";
+            document.getElementById('totalStakedUSD').innerText = "$ " + totalStakedUSD.toFixed(2);
+            document.getElementById('myStakingDetailsTable').innerHTML = hasStaking ? stakingDetailsHtml : '<tr><td colspan="3" style="text-align:center;">Sem staking.</td></tr>';
+
+            ['depToken', 'withdrawToken', 'liqProvideToken', 'liqRemoveToken', 'sellToken'].forEach(id => {
+                document.getElementById(id).innerHTML = optionsHtml;
+            });
+
+            updateBalance('withdrawToken', 'withdrawBalance', 'withdrawAmount');
+            updateBalance('liqProvideToken', 'liqProvideBalance', 'liqProvideAmount');
+            updateLPBalance('liqRemoveToken', 'liqRemoveBalance', 'liqRemoveAmount');
+
+            // NFTs
+            try {
+                const nftAddr = await defiContract.nftContract();
+                if(nftAddr && nftAddr !== ethers.constants.AddressZero) {
+                    const nftContract = new ethers.Contract(nftAddr, nftAbi, provider);
+                    const nftCount = await nftContract.totalSupply();
+                    dashHtml += `<tr style="background-color: #222;"><td>Bens Físicos (NFT)</td><td>N/A</td><td>${nftCount.toString()} Unidades</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>`;
+
+                    // Inicializando as variáveis corretamente
+                    let myNftsHtml = '', myNftTableHtml = '<tr><th>ID</th><th>Descrição</th></tr>', hasNfts = false;
+                    let marketHtml = '<tr><th>ID</th><th>Descrição</th><th>Vendedor</th><th>Preço</th><th>Ação</th></tr>';
+
+                    const marketAddr = document.getElementById('marketAddr').value.trim();
+                    const marketContract = marketAddr ? new ethers.Contract(marketAddr, marketAbi, provider) : null;
+
+                    for(let i=0; i<nftCount; i++) {
+                        try {
+                            const owner = await nftContract.ownerOf(i);
+                            const desc = await nftContract.descriptions(i);
+
+                            if(owner.toLowerCase() === userAddress.toLowerCase()) {
+                                hasNfts = true;
+                                myNftsHtml += `<option value="${i}">ID #${i} - ${desc}</option>`;
+                                myNftTableHtml += `<tr><td>#${i}</td><td>${desc}</td></tr>`;
+                            }
+
+                            if(marketContract) {
+                                const listing = await marketContract.listings(i);
+                                // listing[3] é o booleano 'isActive'
+                                if(listing[3]) {
+                                    const sym = await new ethers.Contract(listing[2], erc20Abi, provider).symbol();
+                                    marketHtml += `<tr><td>#${i}</td><td>${desc}</td><td>${listing[0].slice(0,6)}...</td><td>${ethers.utils.formatEther(listing[1])} ${sym}</td>
+                        <td><button style="padding: 5px;" onclick="buyNFT(${i}, '${listing[1]}', '${listing[2]}')">Comprar</button></td></tr>`;
+                                }
+                            }
+                        } catch(e) {
+                            // Se um NFT der erro, o código apenas pula para o próximo em vez de parar tudo
+                            console.warn("NFT ID " + i + " não pôde ser carregado, pulando...");
+                        }
+                    }
+
+                    // Atualizando o HTML do DOM
+                    document.getElementById('myNftTableRaw').innerHTML = hasNfts ? myNftTableHtml : '<tr><td colspan="2" style="text-align:center;">Você não possui NFTs.</td></tr>';
+                    document.getElementById('myNfts').innerHTML = myNftsHtml || '<option value="">Sem NFTs na carteira</option>';
+                    document.getElementById('marketTable').innerHTML = marketHtml;
+                }
+            } catch(e) {}
+
+            document.getElementById('dashTable').innerHTML = dashHtml;
+
+            // DAO
+            const daoAddr = document.getElementById('daoAddr').value.trim();
+            if(daoAddr) {
+                const dao = new ethers.Contract(daoAddr, daoAbi, provider);
+                const count = await dao.proposalCount();
+                document.getElementById('dashDaoTime').innerText = (await dao.votingDuration()).toString() + " Segundos";
+                let daoHtml = '';
+                const now = Math.floor(Date.now() / 1000);
+                for(let i=0; i<count; i++) {
+                    const p = await dao.getProposalDetails(i);
+                    const targetNames = ["Taxa por Dólar (X)", "Tempo (Y)", "Saque Mínimo", "Tempo Votação"];
+                    const isFinished = now >= p[3];
+                    const aFavor = p[4], contra = p[5], isApproved = aFavor.gt(contra);
+
+                    let statusBadge = "";
+                    if (isFinished) {
+                        if (p[6]) {
+                            if (isApproved) statusBadge = `<span class="status-badge" style="background:#00cc66; color:#000;">Executada (Aprovada)</span>`;
+                            else statusBadge = `<span class="status-badge" style="background:#ff3333; color:#fff;">Encerrada (Rejeitada)</span>`;
+                        } else {
+                            if (isApproved) statusBadge = `<span class="status-badge" style="background:#ffcc00; color:#000;">Aprovada (Aguardando Execução)</span>`;
+                            else statusBadge = `<span class="status-badge" style="background:#ffcc00; color:#000;">Rejeitada (Aguardando Encerramento)</span>`;
+                        }
+                    } else {
+                        statusBadge = `<span class="status-badge" style="background:#444; color:#fff;">Em Votação</span>`;
+                    }
+
+                    let val = (Number(p[1])===0 || Number(p[1])===2) ? ethers.utils.formatEther(p[2]) + " VALT" : p[2].toString() + " Segundos";
+                    daoHtml += `<div style="border: 1px solid #444; padding: 10px; margin-bottom: 5px; background: #111;">
+                                <strong>ID ${i}: ${p[0]}</strong> <br>
+                                <em>Alterar ${targetNames[p[1]]} para ${val}</em><br>
+                                ${statusBadge}<br>
+                                <span style="font-size: 0.8em; color: #888;">A Favor: ${ethers.utils.formatEther(aFavor)} | Contra: ${ethers.utils.formatEther(contra)}</span><br>
+                            ${!isFinished ? `<button style="padding: 5px; margin-top: 5px; background: #00cc66;" onclick="vote(${i}, true)">Votar A FAVOR</button> <button style="padding: 5px; margin-top: 5px; background: #ff3333;" onclick="vote(${i}, false)">Votar CONTRA</button>` : ''}
+                            ${isFinished && !p[6] ? `<button style="padding: 5px; margin-top: 5px; background: #ffcc00; color: #000;" onclick="executeProposal(${i})">Finalizar / Executar</button>` : ''}</div>`;
+                }
+                document.getElementById('daoList').innerHTML = daoHtml || "Nenhuma proposta criada.";
+            }
+            showCurrentValue(); showMsg("Sincronização concluída com sucesso!");
+        } catch (e) { showMsg("Erro geral ao sincronizar.", true); console.error(e); }
+    }
+
+    const getDefi = () => new ethers.Contract(document.getElementById('defiAddr').value, defiAbi, signer);
+
+    async function depositAsset() {
+        const amt = document.getElementById('depAmount').value;
+        try { await (await getDefi().depositRealAsset(document.getElementById('depToken').value, ethers.utils.parseEther(amt))).wait(); loadBlockchainData(); } catch(e) { showMsg("Falha.", true); }
+    }
+    async function withdrawAsset() {
+        if(!validateAmount('withdrawAmount')) return;
+        try { await (await getDefi().withdrawRealAsset(document.getElementById('withdrawToken').value, ethers.utils.parseEther(document.getElementById('withdrawAmount').value))).wait(); loadBlockchainData(); } catch(e) { showMsg("Falha.", true); }
+    }
+    async function provideLiquidity() {
+        if(!validateAmount('liqProvideAmount')) return;
+        try {
+            const tk = document.getElementById('liqProvideToken').value, amt = ethers.utils.parseEther(document.getElementById('liqProvideAmount').value);
+            await (await new ethers.Contract(tk, erc20Abi, signer).approve(getDefi().address, amt)).wait();
+            await (await getDefi().provideLiquidity(tk, amt)).wait();
+            loadBlockchainData();
+        } catch(e) { showMsg("Falha ao travar liquidez.", true); }
+    }
+    async function removeLiquidity() {
+        if(!validateAmount('liqRemoveAmount')) return;
+        try { await (await getDefi().removeLiquidity(document.getElementById('liqRemoveToken').value, ethers.utils.parseEther(document.getElementById('liqRemoveAmount').value))).wait(); loadBlockchainData(); } catch(e) { showMsg("Falha ao remover liquidez.", true); }
+    }
+    async function claimGlobalRewards() {
+        try { await (await getDefi().claimGlobalRewards()).wait(); loadBlockchainData(); } catch(e) { showMsg("Saldo abaixo do mínimo ou erro.", true); }
+    }
+    async function mintNFT() {
+        try { await (await getDefi().registerRealAssetNFT(document.getElementById('nftDesc').value)).wait(); loadBlockchainData(); } catch(e) { showMsg("Falha no registro do NFT.", true); }
+    }
+    async function listNFT() {
+        try {
+            const market = document.getElementById('marketAddr').value, id = document.getElementById('myNfts').value, price = ethers.utils.parseEther(document.getElementById('sellPrice').value), tk = document.getElementById('sellToken').value;
+            const nft = await getDefi().nftContract();
+            await (await new ethers.Contract(nft, nftAbi, signer).approve(market, id)).wait();
+            await (await new ethers.Contract(market, marketAbi, signer).listNFT(id, price, tk)).wait();
+            loadBlockchainData();
+        } catch(e) { showMsg("Falha ao anunciar.", true); }
+    }
+    async function buyNFT(id, priceRaw, tk) {
+        try {
+            const market = document.getElementById('marketAddr').value;
+            await (await new ethers.Contract(tk, erc20Abi, signer).approve(market, priceRaw)).wait();
+            await (await new ethers.Contract(market, marketAbi, signer).buyNFT(id)).wait();
+            loadBlockchainData();
+        } catch(e) { showMsg("Falha na compra.", true); }
+    }
+    async function createProposal() {
+        try {
+            const target = document.getElementById('daoTarget').value;
+            let val = document.getElementById('daoNewValue').value;
+            const finalVal = (target === "0" || target === "2") ? ethers.utils.parseEther(val) : val;
+            await (await new ethers.Contract(document.getElementById('daoAddr').value, daoAbi, signer).createProposal(document.getElementById('daoDesc').value, target, finalVal)).wait();
+            loadBlockchainData();
+        } catch(e) { showMsg("Erro: Sem saldo VALT ou proposta já ativa para esta variável.", true); }
+    }
+    async function vote(id, support) {
+        try { await (await new ethers.Contract(document.getElementById('daoAddr').value, daoAbi, signer).vote(id, support)).wait(); loadBlockchainData(); } catch(e) {
+            if (e.code === "UNPREDICTABLE_GAS_LIMIT" || (e.message && e.message.includes("UNPREDICTABLE_GAS_LIMIT"))) showMsg("Bloqueado: Você já votou ou não possui saldo de VALT.", true);
+            else showMsg("Erro ao votar.", true);
+        }
+    }
+    async function executeProposal(id) {
+        try { await (await new ethers.Contract(document.getElementById('daoAddr').value, daoAbi, signer).executeProposal(id)).wait(); loadBlockchainData(); } catch(e) { showMsg("Falha na execução.", true); }
+    }
+</script>
+</body>
+</html>
