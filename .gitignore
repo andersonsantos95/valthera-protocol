@@ -41,6 +41,11 @@ build/
 *.secret
 
 # ==========================================
+# Relatórios de auditoria gerados automaticamente
+# ==========================================
+reports/
+
+# ==========================================
 # Arquivos de Sistema Operacional
 # ==========================================
 .DS_Store
