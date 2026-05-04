@@ -19,13 +19,21 @@ coverage/
 coverage.json
 broadcast/
 .solhint.json
+deployments/
+ignition/deployments/
+.openzeppelin/
+gas-report.txt
+slither.db.json
 
 # ==========================================
 # Node / Frontend (Pacotes e Build)
 # ==========================================
 node_modules/
-npm-debug.log
-yarn-error.log
+npm-debug.log*
+yarn-error.log*
+lerna-debug.log*
+debug.log
+*.log
 dist/
 build/
 .parcel-cache/
@@ -46,6 +54,11 @@ build/
 reports/
 
 # ==========================================
+# Editores de código
+# ==========================================
+.vscode/
+
+# ==========================================
 # Arquivos de Sistema Operacional
 # ==========================================
 .DS_Store
@@ -55,3 +68,10 @@ reports/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# ==========================================
+# Miscelânea
+# ==========================================
+*.orig
+*.pid
+*.pid.lock
