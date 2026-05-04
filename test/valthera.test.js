@@ -1,9 +1,8 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-// Preços simulados (8 decimais, padrão Chainlink)
-const GOLD_PRICE   = 200000000000n; // $2.000
-const SILVER_PRICE =   3000000000n; // $30
+const GOLD_PRICE   = 200000000000n;
+const SILVER_PRICE =   3000000000n;
 
 async function deploy() {
   const [owner, user1, user2] = await ethers.getSigners();
@@ -43,7 +42,6 @@ async function deploy() {
   return { owner, user1, user2, mockGold, mockSilver, valt, nft, defi, dao, market, vGold, vSilver, lpGold, lpSilver };
 }
 
-// ─── MockV3Aggregator ────────────────────────────────────────────────────────
 describe("MockV3Aggregator", () => {
   it("retorna o preço configurado no construtor", async () => {
     const MockV3 = await ethers.getContractFactory("MockV3Aggregator");
@@ -53,7 +51,6 @@ describe("MockV3Aggregator", () => {
   });
 });
 
-// ─── ValtheraAssets ──────────────────────────────────────────────────────────
 describe("ValtheraAssets", () => {
   it("owner pode cunhar tokens", async () => {
     const [owner, user] = await ethers.getSigners();
@@ -81,7 +78,6 @@ describe("ValtheraAssets", () => {
   });
 });
 
-// ─── ValtheraNFT ─────────────────────────────────────────────────────────────
 describe("ValtheraNFT", () => {
   it("owner pode cunhar NFT com descrição", async () => {
     const [owner, user] = await ethers.getSigners();
@@ -102,7 +98,6 @@ describe("ValtheraNFT", () => {
   });
 });
 
-// ─── ValtheraDeFi ────────────────────────────────────────────────────────────
 describe("ValtheraDeFi", () => {
   describe("Configuração", () => {
     it("ativos são registrados corretamente", async () => {
@@ -113,7 +108,6 @@ describe("ValtheraDeFi", () => {
     it("oráculo retorna preço correto em 18 decimais", async () => {
       const { defi, vGold } = await deploy();
       const price = await defi.getAssetPriceUSD(await vGold.getAddress());
-      // $2000 com 8 dec × 1e10 = 2000e18
       expect(price).to.equal(GOLD_PRICE * 10n ** 10n);
     });
 
@@ -194,7 +188,6 @@ describe("ValtheraDeFi", () => {
       await vGold.connect(user1).approve(await defi.getAddress(), amount);
       await defi.connect(user1).provideLiquidity(await vGold.getAddress(), amount);
 
-      // Avança 120 segundos (2 intervalos de 60s)
       await ethers.provider.send("evm_increaseTime", [120]);
       await ethers.provider.send("evm_mine");
 
@@ -209,7 +202,6 @@ describe("ValtheraDeFi", () => {
       await vGold.connect(user1).approve(await defi.getAddress(), amount);
       await defi.connect(user1).provideLiquidity(await vGold.getAddress(), amount);
 
-      // Avança tempo suficiente para superar minClaimAmount (5 VALT)
       await ethers.provider.send("evm_increaseTime", [3600]);
       await ethers.provider.send("evm_mine");
 
@@ -227,12 +219,9 @@ describe("ValtheraDeFi", () => {
   });
 });
 
-// ─── ValtheraDAO ─────────────────────────────────────────────────────────────
 describe("ValtheraDAO", () => {
   async function deployWithValt() {
     const ctx = await deploy();
-    const amount = ethers.parseEther("1000");
-    // Dá VALT para user1 e user2 via depósito+claim simulado
     await ctx.defi.connect(ctx.user1).depositRealAsset(await ctx.vGold.getAddress(), ethers.parseEther("500"));
     await ctx.vGold.connect(ctx.user1).approve(await ctx.defi.getAddress(), ethers.parseEther("500"));
     await ctx.defi.connect(ctx.user1).provideLiquidity(await ctx.vGold.getAddress(), ethers.parseEther("500"));
@@ -285,13 +274,10 @@ describe("ValtheraDAO", () => {
   });
 });
 
-// ─── ValtheraMarket ──────────────────────────────────────────────────────────
 describe("ValtheraMarket", () => {
   async function deployWithNFT() {
     const ctx = await deploy();
-    // Registra NFT para user1 via DeFi
     await ctx.defi.connect(ctx.user1).registerRealAssetNFT("Galpão RJ");
-    // Dá vGOLD para user2 (comprador)
     await ctx.defi.connect(ctx.user2).depositRealAsset(
       await ctx.vGold.getAddress(), ethers.parseEther("500")
     );

@@ -52,10 +52,10 @@ contract ValtheraDAO {
      * @dev Os valores numéricos correspondem ao parâmetro `target` em `updateDaoParams`.
      */
     enum Target {
-        REWARD_X,   // 0 — taxa de recompensa (rewardRateX)
-        REWARD_Y,   // 1 — intervalo de recompensa (rewardIntervalY)
-        MIN_CLAIM,  // 2 — mínimo para claim (minClaimAmount)
-        VOTE_TIME   // 3 — duração da votação (votingDuration)
+        REWARD_X,
+        REWARD_Y,
+        MIN_CLAIM,
+        VOTE_TIME
     }
 
     /// @notice Indica se há uma proposta ativa para cada parâmetro. Impede propostas duplicadas.
