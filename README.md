@@ -1,55 +1,65 @@
-# Valthera Protocol - RWA Tokenization & DeFi Ecosystem
+# Valthera Protocol
 
-O **Valthera Protocol** é um MVP de um ecossistema Web3 focado na tokenização de ativos do mundo real (RWA - Real World Assets). O protocolo permite a conversão de bens físicos (como ouro, prata e imóveis) em representações digitais na blockchain, habilitando liquidez imediata, segurança institucional e rendimentos automáticos via Staking.
+MVP de protocolo DeFi para tokenização de ativos do mundo real (RWA). Desenvolvido como entrega da **Residência em TIC 29 — Unidade 1, Capítulo 5**.
 
-Este projeto foi desenvolvido como parte da **Residência em TIC 29 (Unidade 1 | Capítulo 5)**.
+## Sobre o Protocolo
 
-## 🚀 Funcionalidades
+O Valthera Protocol converte bens físicos (ouro, prata, imóveis) em tokens na blockchain Ethereum, permitindo staking com recompensas calculadas pelo preço real do ativo via oráculo Chainlink, governança descentralizada e compra/venda de NFTs de ativos físicos.
 
-- **Tokenização RWA:** Emissão de ativos fungíveis (ERC-20) e não fungíveis (ERC-721).
-- **Staking de Ativos:** Bloqueio de vAssets para recebimento de recompensas em tokens VALT.
-- **Oráculos Chainlink:** Precificação em tempo real (USD) diretamente da rede Sepolia para garantir integridade financeira.
-- **Governança (DAO):** Controle descentralizado de parâmetros do protocolo pelos detentores do token VALT.
-- **Marketplace:** Compra e venda atômica de NFTs de bens físicos.
+## Componentes Implementados
 
-## 🛠️ Stack Técnica
-
-- **Smart Contracts:** Solidity ^0.8.20, OpenZeppelin.
-- **Oráculos:** Chainlink (AggregatorV3Interface).
-- **Frontend:** HTML5, CSS3, JavaScript (Vanilla) e **ethers.js**.
-- **Rede:** Ethereum Sepolia Testnet.
-
-## 📄 Contratos e Deploy (Sepolia)
-
-Abaixo estão os endereços dos contratos implantados para verificação no [Sepolia Etherscan](https://sepolia.etherscan.io/):
-
-| Contrato | Tipo | Endereço |
+| Requisito | Contrato | Descrição |
 | :--- | :--- | :--- |
-| **Valthera DeFi (Core)** | Motor / Staking | `0xffA8AC77466c88a29c2Fd9708DC474B244d9DE3e` |
-| **Valthera DAO** | Governança | `0x3B2cBB61F8AB0A69a6CD779043564b316Fe90f7d` |
-| **Valthera Market** | Marketplace | `0xbDEEdF35BC59247F8954F639d8a440e7F9792C36` |
-| **VALT Token** | ERC-20 (Gov/Reward) | `0x86213B5Ac175adf816Ba3faAE1BE0012b1fc6b68` |
-| **vGOLD** | ERC-20 (Asset) | `0x8C4AbD79234D51886278f0AA418376df481858f9` |
-| **vSILVER** | ERC-20 (Asset) | `0x8E879cC8F4a6fBE1a2b0CF64a13996E4D79dE708` |
-| **vLP-GOLD** | ERC-20 (Asset) | `0xcb67B041bf3bdcC63d8124DccBd6a26F5F27777A` |
-| **vLP-SILVER** | ERC-20 (Asset) | `0xfbD854EE30bE45fA098B17D7AaD68c00FEf77C4B` |
-| **Valthera NFT** | ERC-721 (RWA) | `0x5221533fabdd65Ce3681C52a9b75969974E86aF2` |
+| Token ERC-20 | `ValtheraAssets` | VALT (recompensa), vGOLD, vSILVER e tokens LP |
+| NFT ERC-721 | `ValtheraNFT` | Representa ativos físicos únicos (imóveis, propriedades) |
+| Staking | `ValtheraDeFi` | Liquidez com recompensas em VALT proporcionais ao valor USD do ativo |
+| Governança DAO | `ValtheraDAO` | Propostas e votação ponderada por saldo VALT |
+| Oráculo | `ValtheraDeFi` | Integração Chainlink `AggregatorV3Interface` para preço USD |
+| Integração Web3 | `scripts/deploy.js` | Deploy automatizado via ethers.js (Hardhat) |
+| Marketplace | `ValtheraMarket` | Compra e venda de NFTs com liquidação atômica |
 
-## 💻 Como Rodar o Frontend
+## Stack
 
-1. Clone este repositório.
-2. Certifique-se de ter a extensão **MetaMask** instalada no seu navegador.
-3. Configure a MetaMask para a rede **Sepolia Testnet**.
-4. Abra o arquivo `frontend/index.html` em seu navegador (ou utilize a extensão *Live Server* do VS Code).
-5. Na aba **Configurações**, insira os endereços dos contratos listados acima (caso não estejam pré-carregados).
-6. Clique em **Sincronizar Protocolo** e comece a interagir!
+- **Smart Contracts:** Solidity ^0.8.20 + OpenZeppelin
+- **Oráculos:** Chainlink AggregatorV3Interface
+- **Testes:** Hardhat + Chai (27 testes, cobertura 94%)
+- **Frontend:** HTML5 + ethers.js
+- **Rede:** Ethereum Sepolia Testnet
 
-## 🛡️ Segurança e Auditoria
+## Deploy (Sepolia)
 
-O protocolo foi desenvolvido seguindo as melhores práticas de segurança Web3:
-- Proteção contra ataques de reentrância utilizando `ReentrancyGuard`.
-- Controle de acesso rigoroso via padrão `Ownable`.
+| Contrato | Endereço |
+| :--- | :--- |
+| ValtheraDeFi | `0x18d5BceEd7892fA2Cd70646f66C032dd5A418bA1` |
+| ValtheraDAO | `0xa0EeE290cB5E631AfC105b070CfB158e9A588513` |
+| ValtheraMarket | `0x8a0bAC194E61651EBda6cb058D78929578391f7B` |
+| ValtheraNFT | `0x757e723717024bd1f0361aC3d6C3BBF2bd5a7a51` |
+| VALT | `0x38234e7c982c9174DbFB40716D460AA74C855163` |
+| vGOLD | `0xb8B5104783416eCb1e40988F6f31e0b3A4d9b044` |
+| vSILVER | `0xE0f68624eD441E77CB5579320fF2B074B3BBfD44` |
+| vLP-GOLD | `0xD42a5B700d52a0dbD9dCC9AE6609577c3c1d2068` |
+| vLP-SILVER | `0x851AB4FE368144801f45e8DE17B57A2543ad4EFd` |
+| Oracle vGOLD | `0xC5981F461d74c46eB4b0CF3f4Ec79f025573B0Ea` |
+| Oracle vSILVER | `0x694AA1769357215DE4FAC081bf1f309aDC325306` |
+
+Verificação: [sepolia.etherscan.io](https://sepolia.etherscan.io/)
+
+## Como Executar Localmente
+
+```bash
+npm install
+npx hardhat test           # roda os 27 testes
+npx hardhat run scripts/deploy.js --network localhost
+```
+
+Para o frontend, abra `frontend/index.html` com a extensão Live Server e conecte a MetaMask na rede Sepolia.
+
+## Segurança
+
+- `ReentrancyGuard` (OpenZeppelin) em todas as funções com chamadas externas
+- `Ownable` com controle de acesso explícito em funções críticas
+- Solidity 0.8.20 com proteção nativa contra overflow/underflow
+- Auditoria executada com Slither, Mythril e Hardhat Coverage — sem vulnerabilidades críticas
 
 ---
-**Desenvolvido por:** Anderson Santos da Silva  
-**Disciplina:** Desenvolvimento de Protocolo Web3 - Residência em TIC 29
+**Autor:** Anderson Santos da Silva · Residência em TIC 29
